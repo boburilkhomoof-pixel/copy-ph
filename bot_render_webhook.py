@@ -9,7 +9,7 @@ from PIL import Image
 import imagehash
 import pytesseract
 from telegram import Bot, Update
-from telegram.ext import Dispatcher, MessageHandler, filters, ContextTypes
+from telegram.ext import Application, MessageHandler, filters, ContextTypes
 
 # Tesseract yo'nalishini OS ga qarab sozlash
 if platform.system() == "Windows":
@@ -21,10 +21,12 @@ else:
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 ADMIN_ID = os.environ.get('ADMIN_ID')
 
-# Flask app - BU MUHIM!
+# Flask app
 app = Flask(__name__)
 bot = Bot(token=BOT_TOKEN)
-dispatcher = Dispatcher(bot, None, workers=0)
+
+# Application (Dispatcher o'rniga)
+application = Application.builder().bot(bot).build()
 
 # Logging
 logging.basicConfig(level=logging.INFO)
@@ -146,12 +148,19 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Xatolik: {e}")
 
-# Webhook endpoint - BU HAM MUHIM!
+# Webhook endpoint
 @app.route(f'/{BOT_TOKEN}', methods=['POST'])
 def webhook():
     json_str = request.get_data().decode('UTF-8')
     update = Update.de_json(json.loads(json_str), bot)
-    dispatcher.process_update(update)
+    
+    # Update ni qayta ishlash
+    async def process_update():
+        await application.process_update(update)
+    
+    import asyncio
+    asyncio.run(process_update())
+    
     return 'OK', 200
 
 # Health check
@@ -160,7 +169,7 @@ def health():
     return 'OK', 200
 
 # Handler qo'shish
-dispatcher.add_handler(MessageHandler(filters.PHOTO, handle_photo))
+application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
