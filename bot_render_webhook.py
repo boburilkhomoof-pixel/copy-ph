@@ -74,6 +74,22 @@ def extract_text_from_image(image_path):
         logger.error(f"OCR xatolik: {e}")
         return ""
 
+# Application yaratish
+application = Application.builder().bot(bot).build()
+
+# Handler qo'shish
+application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
+
+# Async initialize funksiyasi
+async def init_application():
+    await application.initialize()
+    logger.info("✅ Application initialized")
+
+# Initialize ni ishga tushirish
+loop = asyncio.new_event_loop()
+asyncio.set_event_loop(loop)
+loop.run_until_complete(init_application())
+
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         user = update.message.from_user
@@ -148,15 +164,6 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Xatolik: {e}")
 
-# Application yaratish (global)
-application = Application.builder().bot(bot).build()
-
-# Handler qo'shish
-application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
-
-# Initialize qilish (MUHIM: handlerlardan KEYIN!)
-application.initialize()
-
 # Webhook endpoint
 @app.route(f'/{BOT_TOKEN}', methods=['POST'])
 def webhook():
@@ -164,7 +171,7 @@ def webhook():
         json_str = request.get_data().decode('UTF-8')
         update = Update.de_json(json.loads(json_str), bot)
         
-        # Update ni qayta ishlash
+        # Update ni ishlatish
         asyncio.run(application.process_update(update))
         
         return 'OK', 200
