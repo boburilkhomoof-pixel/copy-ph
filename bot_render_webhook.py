@@ -26,18 +26,13 @@ ADMIN_ID = os.environ.get('ADMIN_ID')
 app = Flask(__name__)
 bot = Bot(token=BOT_TOKEN)
 
-# Application yaratish va initialize qilish
-application = Application.builder().bot(bot).build()
-application.initialize()  # MUHIM: initialize chaqirish kerak!
-application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
-
 # Logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Database
 def init_db():
-    conn = sqlite3.connect('/tmp/images.db')  # /tmp da ishlatish yaxshi
+    conn = sqlite3.connect('/tmp/images.db')
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS images
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -68,12 +63,9 @@ def hamming_distance(hash1, hash2):
     return sum(c1 != c2 for c1, c2 in zip(hash1, hash2))
 
 def extract_text_from_image(image_path):
-    """Rasmdan matn ajratib olish"""
     try:
         if not os.path.exists(pytesseract.pytesseract.tesseract_cmd):
-            logger.warning("Tesseract topilmadi, OCR ishlamaydi")
             return ""
-        
         img = Image.open(image_path)
         img.thumbnail((1000, 1000))
         text = pytesseract.image_to_string(img, lang='rus+eng')
@@ -155,6 +147,15 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
     except Exception as e:
         logger.error(f"Xatolik: {e}")
+
+# Application yaratish (global)
+application = Application.builder().bot(bot).build()
+
+# Handler qo'shish
+application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
+
+# Initialize qilish (MUHIM: handlerlardan KEYIN!)
+application.initialize()
 
 # Webhook endpoint
 @app.route(f'/{BOT_TOKEN}', methods=['POST'])
